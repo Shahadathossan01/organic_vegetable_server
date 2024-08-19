@@ -8,6 +8,10 @@ const port=3000
 app.use(cors())
 app.use(express.json())
 const bcrypt=require('bcryptjs')
+const jwt=require('jsonwebtoken')
+const authenticate = require('./middleware/authenticate')
+const Product = require('./Models/Product')
+const Order = require('./Models/Order')
 
 app.get('/health',(req,res)=>{
     try{
@@ -42,7 +46,7 @@ app.post('/register',async(req,res)=>{
 app.post('/login',async(req,res,next)=>{
     const {email,password}=req.body
     try{
-        const user=await User.findOne({email})
+        const user=await User.findOne({email}).populate('order_list')
         if(!user){
             return res.status(400).json({message:'Invalid Credential'})
         }
@@ -50,8 +54,33 @@ app.post('/login',async(req,res,next)=>{
         if(!isMatch){
             return res.status(400).json({message:'Invalid Credential'})
         }
-        delete user._doc.password;
-        return res.status(200).json({message:'Login Successful',user})
+        const payload={
+            _id:user._id,
+            username:user.username,
+            email:user.email,
+            order_list:user.order_list,
+            fab_list:user.fab_list
+        }
+        const token=jwt.sign(payload,'secret-key')
+        return res.status(200).json({message:'Login Successful',token})
+    }catch{
+        next(error)
+    }
+})
+
+app.post('/product',async(req,res,next)=>{
+    const {title,description,image,price,hot_deals,sesional,category}=req.body
+    try{
+        const product=await Product.create({
+            title:title,
+            description:description,
+            image:image,
+            price:price,
+            hot_deals:hot_deals,
+            sesional:sesional,
+            category:category
+        })
+        res.status(200).json(product)
     }catch{
         next(error)
     }
@@ -59,22 +88,39 @@ app.post('/login',async(req,res,next)=>{
 
 
 
+app.post('/order/:userId',async(req,res,next)=>{
+    const id=req.params.userId
+    const {title,description,image,price}=req.body
+    try{    
+        const order=await Order.create({
+            title:title,
+            description:description,
+            image:image,
+            price:price,
+            status:'panding'
+        })
+        const user=await User.findById(id)
+        user.order_list.push(order._id)
+        await user.save()
+        res.status(200).json(order)
+    }catch{
+        next(error)
+    }
+})
+
+app.get('/order',async(req,res,next)=>{
+    try{
+        const orders=await Order.find()
+        res.status(200).json(orders)
+    }catch{
+        next(error)
+    }
+})
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+app.get('/private',authenticate,async(req,res)=>{
+    return res.status(200).json({message:'I am a private route'})
+})
 
 app.use((err,req,res,next)=>{
     console.log(err)
@@ -91,8 +137,5 @@ connectDB('mongodb+srv://hossantopu:boIYlXXdeyqQ88ZH@cluster0.d6frz.mongodb.net/
     })
 })
 .catch((e)=>{
-    console.log(e)
+    throw error()
 })
-
-
-// boIYlXXdeyqQ88ZH

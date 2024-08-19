@@ -6,7 +6,7 @@ const userSchema=new Schema({
     password:String,
     order_list:[{
         type:Schema.Types.ObjectId,
-        ref:'OderList'
+        ref:'Order'
     }],
     fab_list:[{
         type:Schema.Types.ObjectId,
