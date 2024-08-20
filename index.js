@@ -12,6 +12,7 @@ const jwt=require('jsonwebtoken')
 const authenticate = require('./middleware/authenticate')
 const Product = require('./Models/Product')
 const Order = require('./Models/Order')
+const Cart = require('./Models/Cart')
 
 app.get('/health',(req,res)=>{
     try{
@@ -62,7 +63,7 @@ app.post('/login',async(req,res,next)=>{
             fab_list:user.fab_list
         }
         const token=jwt.sign(payload,'secret-key')
-        return res.status(200).json({message:'Login Successful',token})
+        return res.status(200).json({message:'Login Successful',token,payload})
     }catch{
         next(error)
     }
@@ -82,6 +83,48 @@ app.post('/product',async(req,res,next)=>{
         })
         res.status(200).json(product)
     }catch{
+        next(error)
+    }
+})
+
+app.get('/product',async(req,res,next)=>{
+    try{
+        const product=await Product.find()
+        res.status(200).json(product)
+    }catch{
+        next(error)
+    }
+})
+
+app.post('/addToCart/:productId/:userId',async(req,res,next)=>{
+        const {productId,userId}=req.params
+        console.log(productId)
+        console.log(userId)
+        const cart=await Cart.create({
+            userId:userId,
+            cart:productId
+        })
+        res.status(200).json(cart)
+})
+
+app.get('/cart',async(req,res,next)=>{
+    try{
+        const cart=await Cart.find().populate('cart')
+        res.status(200).json(cart)
+    }catch{
+        next(error)
+    }
+})
+
+app.delete('/cart/:id',async(req,res,next)=>{
+    const id=req.params.id
+    try{
+        const cart=await Cart.deleteOne({
+            _id:id
+        })
+        res.status(200).json({message:'delete successfully'})
+    }
+    catch{
         next(error)
     }
 })
