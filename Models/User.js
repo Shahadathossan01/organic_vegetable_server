@@ -11,6 +11,10 @@ const userSchema=new Schema({
     fab_list:[{
         type:Schema.Types.ObjectId,
         ref:'Product'
+    }],
+    cart:[{
+        type:Schema.Types.ObjectId,
+        ref:'Cart'
     }]
 })
 

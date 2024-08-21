@@ -7,7 +7,8 @@ const productSchema=new Schema({
     price:Number,
     hot_deals:Boolean,
     sesional:Boolean,
-    category:String
+    category:String,
+    fav:Boolean
 })
 
 const Product=model('Product',productSchema)

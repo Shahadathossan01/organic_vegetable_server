@@ -60,7 +60,8 @@ app.post('/login',async(req,res,next)=>{
             username:user.username,
             email:user.email,
             order_list:user.order_list,
-            fab_list:user.fab_list
+            fab_list:user.fab_list,
+            cart:user.cart
         }
         const token=jwt.sign(payload,'secret-key')
         return res.status(200).json({message:'Login Successful',token,payload})
@@ -68,9 +69,14 @@ app.post('/login',async(req,res,next)=>{
         next(error)
     }
 })
+app.get('/user/:id',async(req,res,next)=>{
+    const id=req.params.id
+    const user=await User.findById(id).populate('cart')
+    res.status(200).json(user)
 
+})
 app.post('/product',async(req,res,next)=>{
-    const {title,description,image,price,hot_deals,sesional,category}=req.body
+    const {title,description,image,price,hot_deals,sesional,category,fav}=req.body
     try{
         const product=await Product.create({
             title:title,
@@ -79,7 +85,8 @@ app.post('/product',async(req,res,next)=>{
             price:price,
             hot_deals:hot_deals,
             sesional:sesional,
-            category:category
+            category:category,
+            fav:fav
         })
         res.status(200).json(product)
     }catch{
@@ -98,13 +105,30 @@ app.get('/product',async(req,res,next)=>{
 
 app.post('/addToCart/:productId/:userId',async(req,res,next)=>{
         const {productId,userId}=req.params
-        console.log(productId)
-        console.log(userId)
-        const cart=await Cart.create({
-            userId:userId,
-            cart:productId
-        })
-        res.status(200).json(cart)
+       const cart=await Cart.find()
+       let count=true;
+       let existingCart
+       cart.map(item=>{
+        if(item.cart._id==productId){
+            count=false
+            existingCart=item
+        }
+       })
+       if(count){
+           const newCart=await Cart.create({
+               userId:userId,
+               cart:productId,
+               cartQty:1
+           })
+           const user=await User.findById(userId).updateOne({
+            $push : {cart:newCart._id}
+           })
+           res.status(200).json(newCart)
+       }else{
+        existingCart.cartQty +=1
+        console.log('clicked')
+        await existingCart.save()
+       }
 })
 
 app.get('/cart',async(req,res,next)=>{
@@ -129,6 +153,46 @@ app.delete('/cart/:id',async(req,res,next)=>{
     }
 })
 
+app.patch('/cartQtyIncrement/:cartId', async (req, res, next) => {
+    const { cartId } = req.params;
+    try {
+        let cart = await Cart.findById(cartId);
+        if (!cart) {
+            return res.status(404).json({ message: 'Cart not found' });
+        }
+        cart.cartQty += 1;
+        await cart.save();
+        
+        res.status(200).json(cart);
+    } catch (error) {
+        next(error); // Pass the error to the next middleware
+    }
+});
+app.patch('/cartQtyDecrement/:cartId', async (req, res, next) => {
+    const { cartId } = req.params;
+    try {
+        let cart = await Cart.findById(cartId);
+        if (!cart) {
+            return res.status(404).json({ message: 'Cart not found' });
+        }
+        if(cart.cartQty>1){
+            cart.cartQty -= 1;
+            await cart.save();
+        }
+        
+        res.status(200).json(cart);
+    } catch (error) {
+        next(error); // Pass the error to the next middleware
+    }
+});
+app.delete('/deleteAllCart',async(req,res,next)=>{
+    try{
+        const result=await Cart.deleteMany({})
+        res.status(200).json(result)
+    }catch{
+        next(error)
+    }
+})
 
 
 app.post('/order/:userId',async(req,res,next)=>{
