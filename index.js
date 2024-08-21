@@ -71,8 +71,19 @@ app.post('/login',async(req,res,next)=>{
 })
 app.get('/user/:id',async(req,res,next)=>{
     const id=req.params.id
-    const user=await User.findById(id).populate('cart')
-    res.status(200).json(user)
+    try{
+
+        const user=await User.findById(id).populate({
+            path:'cart',
+            populate:{
+                path:'cart',
+                model:'Product'
+            }
+        })
+        res.status(200).json(user)
+    }catch{
+        next(error)
+    }
 
 })
 app.post('/product',async(req,res,next)=>{
@@ -126,7 +137,6 @@ app.post('/addToCart/:productId/:userId',async(req,res,next)=>{
            res.status(200).json(newCart)
        }else{
         existingCart.cartQty +=1
-        console.log('clicked')
         await existingCart.save()
        }
 })
