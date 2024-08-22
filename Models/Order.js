@@ -2,11 +2,18 @@ const mongoose=require('mongoose')
 const {Schema,model}=mongoose;
 
 const orderSchema=new Schema({
-    title:String,
-    description:String,
-    image:String,
-    price:Number,
-    status:String
+    cartItem:Array,
+    fullName:String,
+    phone:String,
+    address:String,
+    status:{
+        type:String,
+        enum:['panding','payed'],
+        default:'panding'
+    },
+
+
+
 })
 
 const Order=model('Order',orderSchema)

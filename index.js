@@ -81,6 +81,7 @@ app.get('/user/:id',async(req,res,next)=>{
             }
         })
         .populate('fab_list')
+        .populate('order_list')
         res.status(200).json(user)
     }catch{
         next(error)
@@ -221,17 +222,15 @@ app.delete('/deleteAllCart',async(req,res,next)=>{
     }
 })
 
-
 app.post('/order/:userId',async(req,res,next)=>{
     const id=req.params.userId
-    const {title,description,image,price}=req.body
+    const {cartItem,fullName,phone,address,status}=req.body
     try{    
         const order=await Order.create({
-            title:title,
-            description:description,
-            image:image,
-            price:price,
-            status:'panding'
+            cartItem:cartItem,
+            fullName:fullName,
+            phone:phone,
+            address:address
         })
         const user=await User.findById(id)
         user.order_list.push(order._id)
@@ -241,7 +240,15 @@ app.post('/order/:userId',async(req,res,next)=>{
         next(error)
     }
 })
-
+app.delete('/order/:orderId',async(req,res,next)=>{
+    const {orderId}=req.params
+    try{
+        const data=await Order.findById(orderId).deleteOne()
+        res.status(200).json(data)
+    }catch{
+        next(error)
+    }
+})
 app.get('/order',async(req,res,next)=>{
     try{
         const orders=await Order.find()
