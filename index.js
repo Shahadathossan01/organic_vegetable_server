@@ -43,7 +43,6 @@ app.post('/register',async(req,res)=>{
     await user.save()
     return res.status(201).json({message:'user created successfully',user})
 })
-
 app.post('/login',async(req,res,next)=>{
     const {email,password}=req.body
     try{
@@ -73,13 +72,15 @@ app.get('/user/:id',async(req,res,next)=>{
     const id=req.params.id
     try{
 
-        const user=await User.findById(id).populate({
+        const user=await User.findById(id)
+        .populate({
             path:'cart',
             populate:{
                 path:'cart',
                 model:'Product'
             }
         })
+        .populate('fab_list')
         res.status(200).json(user)
     }catch{
         next(error)
@@ -104,7 +105,6 @@ app.post('/product',async(req,res,next)=>{
         next(error)
     }
 })
-
 app.get('/product',async(req,res,next)=>{
     try{
         const product=await Product.find()
@@ -113,7 +113,6 @@ app.get('/product',async(req,res,next)=>{
         next(error)
     }
 })
-
 app.post('/addToCart/:productId/:userId',async(req,res,next)=>{
         const {productId,userId}=req.params
        const cart=await Cart.find()
@@ -140,7 +139,25 @@ app.post('/addToCart/:productId/:userId',async(req,res,next)=>{
         await existingCart.save()
        }
 })
-
+app.post('/addFav/:productId/:userId',async(req,res,next)=>{
+    const {productId,userId}=req.params
+    const product=await Product.findById(productId)
+    const user=await User.findById(userId)
+    if(product.fav){
+        const updateUser=await User.findById(userId).updateOne({
+            $pull :{fab_list:productId}
+        })
+        
+    }else{
+        const updateUser=await User.findById(userId).updateOne({
+            $push :{fab_list:productId}
+        })
+    }
+    const updateProduct=await Product.findById(productId).updateOne({
+        fav: !product.fav
+    })
+    res.status(200).json(updateProduct)
+}),
 app.get('/cart',async(req,res,next)=>{
     try{
         const cart=await Cart.find().populate('cart')
