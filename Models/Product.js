@@ -8,7 +8,11 @@ const productSchema=new Schema({
     hot_deals:Boolean,
     sesional:Boolean,
     category:String,
-    fav:Boolean
+    fav:Boolean,
+    review:[{
+        type:mongoose.Types.ObjectId,
+        ref:'Review'
+    }]
 })
 
 const Product=model('Product',productSchema)

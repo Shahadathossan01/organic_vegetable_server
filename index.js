@@ -20,6 +20,7 @@ const Order = require('./Models/Order')
 const Cart = require('./Models/Cart')
 const calculate = require('./utils')
 const { v4: uuidv4 } = require('uuid');
+const Review = require('./Models/Review')
 app.get('/health',(req,res)=>{
     try{
         res.status(200).json('Good Health. Best of luck!')
@@ -28,7 +29,6 @@ app.get('/health',(req,res)=>{
     }
 
 })
-
 app.post('/register',async(req,res)=>{
     const {username,email,password}=req.body
 
@@ -114,7 +114,7 @@ app.post('/product',async(req,res,next)=>{
 })
 app.get('/product',async(req,res,next)=>{
     try{
-        const product=await Product.find()
+        const product=await Product.find().populate('review')
         res.status(200).json(product)
     }catch{
         next(error)
@@ -173,7 +173,6 @@ app.get('/cart',async(req,res,next)=>{
         next(error)
     }
 })
-
 app.delete('/cart/:id',async(req,res,next)=>{
     const id=req.params.id
     try{
@@ -186,7 +185,6 @@ app.delete('/cart/:id',async(req,res,next)=>{
         next(error)
     }
 })
-
 app.patch('/cartQtyIncrement/:cartId', async (req, res, next) => {
     const { cartId } = req.params;
     try {
@@ -227,7 +225,6 @@ app.delete('/deleteAllCart',async(req,res,next)=>{
         next(error)
     }
 })
-
 app.post('/order/:userId',async(req,res,next)=>{
     const id=req.params.userId
     const {cartItem,fullName,phone,address,status}=req.body
@@ -279,7 +276,10 @@ app.post('/order/:userId',async(req,res,next)=>{
                     fullName:fullName,
                     phone:phone,
                     address:address,
-                    status:'payed'
+                    status:'payed',
+                    totalAmount:cartCalculate.total,
+                    totalQty:cartCalculate.quantity
+
                 })
                 const user=await User.findById(id)
                 user.order_list.push(order._id)
@@ -318,8 +318,23 @@ app.get('/order',async(req,res,next)=>{
         next(error)
     }
 })
-
-
+app.post('/review/:productId',async(req,res,next)=>{
+    const {author,ratting,comments}=req.body
+    const {productId}=req.params
+    try{
+        const review=await Review.create({
+            author:author,
+            ratting:ratting,
+            comments:comments
+        })
+        const product=await Product.findById(productId).updateOne({
+            $push: {review: review._id}
+        })
+        res.status(200).json(review)
+    }catch{
+        next(error)
+    }
+})
 app.get('/private',authenticate,async(req,res)=>{
     return res.status(200).json({message:'I am a private route'})
 })

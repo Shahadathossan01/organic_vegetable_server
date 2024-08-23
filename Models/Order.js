@@ -11,6 +11,8 @@ const orderSchema=new Schema({
         enum:['panding','payed'],
         default:'panding'
     },
+    totalAmount:Number,
+    totalQty:Number
 
 
 
