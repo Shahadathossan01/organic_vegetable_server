@@ -1,9 +1,14 @@
+const mongoose=require('mongoose')
 const express=require('express')
 const app=express()
 const cors=require('cors')
 const connectDB = require('./db')
 const error = require('./utils/error')
 const User = require('./Models/user')
+const SSLCommerzPayment = require('sslcommerz-lts')
+const store_id = 'ownco66c82257a59ad'
+const store_passwd = 'ownco66c82257a59ad@ssl'
+const is_live = false //true for live, false for sandbox
 const port=3000
 app.use(cors())
 app.use(express.json())
@@ -13,7 +18,8 @@ const authenticate = require('./middleware/authenticate')
 const Product = require('./Models/Product')
 const Order = require('./Models/Order')
 const Cart = require('./Models/Cart')
-
+const calculate = require('./utils')
+const { v4: uuidv4 } = require('uuid');
 app.get('/health',(req,res)=>{
     try{
         res.status(200).json('Good Health. Best of luck!')
@@ -225,17 +231,72 @@ app.delete('/deleteAllCart',async(req,res,next)=>{
 app.post('/order/:userId',async(req,res,next)=>{
     const id=req.params.userId
     const {cartItem,fullName,phone,address,status}=req.body
-    try{    
-        const order=await Order.create({
-            cartItem:cartItem,
-            fullName:fullName,
-            phone:phone,
-            address:address
+    const cartCalculate=calculate(cartItem)
+    const tranId = uuidv4();
+    try{ 
+        
+        const data = {
+            total_amount: cartCalculate.total,
+            currency: 'BDT',
+            tran_id: tranId, // use unique tran_id for each api call
+            success_url: 'http://localhost:3000/payment/success',
+            fail_url: 'http://localhost:3000/payment/fail',
+            cancel_url: 'http://localhost:3000/payment/cancel',
+            ipn_url: 'http://localhost:3030/ipn',
+            shipping_method: 'Courier',
+            product_name: 'Computer.',
+            product_category: 'Electronic',
+            product_profile: 'general',
+            cus_name: fullName,
+            cus_email: 'customer@example.com',
+            cus_add1: address,
+            cus_add2: 'Dhaka',
+            cus_city: 'Dhaka',
+            cus_state: 'Dhaka',
+            cus_postcode: '1000',
+            cus_country: 'Bangladesh',
+            cus_phone: phone,
+            cus_fax: '01711111111',
+            ship_name: 'Customer Name',
+            ship_add1: 'Dhaka',
+            ship_add2: 'Dhaka',
+            ship_city: 'Dhaka',
+            ship_state: 'Dhaka',
+            ship_postcode: 1000,
+            ship_country: 'Bangladesh',
+        };
+        const sslcz = new SSLCommerzPayment(store_id, store_passwd, is_live)
+        sslcz.init(data).then(apiResponse => {
+            // Redirect the user to payment gateway
+            let GatewayPageURL = apiResponse.GatewayPageURL
+            res.status(200).json({url:GatewayPageURL})
+        });
+
+        app.post("/payment/success",async(req,res,next)=>{
+            try{
+                const order=await Order.create({
+                    cartItem:cartItem,
+                    fullName:fullName,
+                    phone:phone,
+                    address:address,
+                    status:'payed'
+                })
+                const user=await User.findById(id)
+                user.order_list.push(order._id)
+                await user.save()
+                if(order){
+                    res.redirect('http://localhost:5173/paymentSuccess')
+                }
+            }catch{
+                next(error)
+            }
         })
-        const user=await User.findById(id)
-        user.order_list.push(order._id)
-        await user.save()
-        res.status(200).json(order)
+        app.post("/payment/fail",async(req,res,next)=>{
+            res.redirect('http://localhost:5173/paymentFail')
+        })
+        app.post("/payment/cancel",async(req,res,next)=>{
+            res.redirect('http://localhost:5173/paymentCalcel')
+        })
     }catch{
         next(error)
     }
