@@ -114,7 +114,16 @@ app.post('/product',async(req,res,next)=>{
 })
 app.get('/product',async(req,res,next)=>{
     try{
-        const product=await Product.find().populate('review')
+        const product=await Product.find()
+        res.status(200).json(product)
+    }catch{
+        next(error)
+    }
+})
+app.get('/product/:productId',async(req,res,next)=>{
+    const {productId}=req.params
+    try{
+        const product=await Product.findById(productId).populate('review')
         res.status(200).json(product)
     }catch{
         next(error)
@@ -334,6 +343,19 @@ app.post('/review/:productId',async(req,res,next)=>{
     }catch{
         next(error)
     }
+})
+app.patch('/review/:id',async(req,res,next)=>{
+    const {id}=req.params;
+    const {ratting,comments}=req.body
+    try{
+        const updateReview=await Review.findById(id).updateMany({
+            $set:{ratting,comments}
+        })
+        res.status(200).json(updateReview)
+    }catch(error){
+        res.status(500).json({message:'Review not found',error})
+    }
+
 })
 app.get('/private',authenticate,async(req,res)=>{
     return res.status(200).json({message:'I am a private route'})
