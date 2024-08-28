@@ -4,23 +4,27 @@ const app=express()
 const cors=require('cors')
 const connectDB = require('./db')
 const error = require('./utils/error')
-const User = require('./Models/user')
+require('dotenv').config()
 const SSLCommerzPayment = require('sslcommerz-lts')
-const store_id = 'ownco66c82257a59ad'
-const store_passwd = 'ownco66c82257a59ad@ssl'
+const store_id = process.env.STORE_ID
+const store_passwd = process.env.STORE_PASSED
 const is_live = false //true for live, false for sandbox
-const port=3000
+const port=process.env.PORT
+const dataBaseUrl=process.env.DATABASE_URL
 app.use(cors())
 app.use(express.json())
 const bcrypt=require('bcryptjs')
 const jwt=require('jsonwebtoken')
 const authenticate = require('./middleware/authenticate')
+const User = require('./Models/user')
 const Product = require('./Models/Product')
 const Order = require('./Models/Order')
 const Cart = require('./Models/Cart')
+const Review = require('./Models/Review')
 const calculate = require('./utils')
 const { v4: uuidv4 } = require('uuid');
-const Review = require('./Models/Review')
+const { registerController, loginController } = require('./controller/auth')
+
 app.get('/health',(req,res)=>{
     try{
         res.status(200).json('Good Health. Best of luck!')
@@ -29,51 +33,9 @@ app.get('/health',(req,res)=>{
     }
 
 })
-app.post('/register',async(req,res)=>{
-    const {username,email,password}=req.body
 
-    if(!username || !email || !password){
-        return res.status(400).json({message:'Invalid Data'})
-    }
-    let user=await User.findOne({email})
-    if(user){
-        return res.status(400).json({message:'user already exists'})
-    }
-
-    user=new User({
-        username,email,password
-    })
-    const salt=bcrypt.genSaltSync(10)
-    const hash=bcrypt.hashSync(password,salt)
-    user.password=hash
-    await user.save()
-    return res.status(201).json({message:'user created successfully',user})
-})
-app.post('/login',async(req,res,next)=>{
-    const {email,password}=req.body
-    try{
-        const user=await User.findOne({email}).populate('order_list')
-        if(!user){
-            return res.status(400).json({message:'Invalid Credential'})
-        }
-        const isMatch=await bcrypt.compare(password,user.password)
-        if(!isMatch){
-            return res.status(400).json({message:'Invalid Credential'})
-        }
-        const payload={
-            _id:user._id,
-            username:user.username,
-            email:user.email,
-            order_list:user.order_list,
-            fab_list:user.fab_list,
-            cart:user.cart
-        }
-        const token=jwt.sign(payload,'secret-key')
-        return res.status(200).json({message:'Login Successful',token,payload})
-    }catch{
-        next(error)
-    }
-})
+app.post('/register',registerController)
+app.post('/login',loginController)
 app.get('/user/:id',async(req,res,next)=>{
     const id=req.params.id
     try{
@@ -94,6 +56,7 @@ app.get('/user/:id',async(req,res,next)=>{
     }
 
 })
+
 app.post('/product',async(req,res,next)=>{
     const {title,description,image,price,hot_deals,sesional,category,fav}=req.body
     try{
@@ -174,6 +137,7 @@ app.post('/addFav/:productId/:userId',async(req,res,next)=>{
     })
     res.status(200).json(updateProduct)
 }),
+
 app.get('/cart',async(req,res,next)=>{
     try{
         const cart=await Cart.find().populate('cart')
@@ -234,6 +198,7 @@ app.delete('/deleteAllCart',async(req,res,next)=>{
         next(error)
     }
 })
+
 app.post('/order/:userId',async(req,res,next)=>{
     const id=req.params.userId
     const {cartItem,fullName,phone,address,status}=req.body
@@ -327,6 +292,7 @@ app.get('/order',async(req,res,next)=>{
         next(error)
     }
 })
+
 app.post('/review/:productId',async(req,res,next)=>{
     const {author,ratting,comments}=req.body
     const {productId}=req.params
@@ -357,6 +323,7 @@ app.patch('/review/:id',async(req,res,next)=>{
     }
 
 })
+
 app.get('/private',authenticate,async(req,res)=>{
     return res.status(200).json({message:'I am a private route'})
 })
@@ -368,7 +335,7 @@ app.use((err,req,res,next)=>{
     res.status(status).json({message})
 })
 
-connectDB('mongodb+srv://hossantopu:boIYlXXdeyqQ88ZH@cluster0.d6frz.mongodb.net/organic_vetetables')
+connectDB(`${dataBaseUrl}/organic_vetetables`)
 .then(()=>{
     console.log('Database Connected')
     app.listen(port,()=>{
