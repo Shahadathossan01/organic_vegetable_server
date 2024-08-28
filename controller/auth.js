@@ -1,4 +1,4 @@
-const { registerService, loginService } = require("../service/auth")
+const { registerService, loginService, userByIdService } = require("../service/auth")
 const error = require("../utils/error")
 
 const registerController=async(req,res,next)=>{
@@ -27,4 +27,18 @@ const loginController=async(req,res,next)=>{
         next(error)
     }
 }
-module.exports={registerController,loginController}
+
+const userByIdController=async(req,res,next)=>{
+    const id=req.params.id
+    if(!id){
+        return res.status(400).json({message:'Invalid Id'})
+    }
+    try{
+        const user=await userByIdService(id)
+        res.status(200).json(user)
+    }catch{
+        next(error)
+    }
+
+}
+module.exports={registerController,loginController,userByIdController}

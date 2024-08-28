@@ -46,4 +46,22 @@ const loginService=async(email,password)=>{
         throw error('server error')
     }
 }
-module.exports={registerService,loginService}
+
+const userByIdService=async(id)=>{
+    try{
+        const user=await User.findById(id)
+        .populate({
+            path:'cart',
+            populate:{
+                path:'cart',
+                model:'Product'
+            }
+        })
+        .populate('fab_list')
+        .populate('order_list')
+        return user
+    }catch(e){
+        throw error()
+    }
+}
+module.exports={registerService,loginService,userByIdService}

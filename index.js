@@ -23,7 +23,8 @@ const Cart = require('./Models/Cart')
 const Review = require('./Models/Review')
 const calculate = require('./utils')
 const { v4: uuidv4 } = require('uuid');
-const { registerController, loginController } = require('./controller/auth')
+const { registerController, loginController, userByIdController } = require('./controller/auth')
+const { createProductController, getProductController, getProductByIdController } = require('./controller/product')
 
 app.get('/health',(req,res)=>{
     try{
@@ -36,62 +37,11 @@ app.get('/health',(req,res)=>{
 
 app.post('/register',registerController)
 app.post('/login',loginController)
-app.get('/user/:id',async(req,res,next)=>{
-    const id=req.params.id
-    try{
+app.get('/user/:id',userByIdController)
 
-        const user=await User.findById(id)
-        .populate({
-            path:'cart',
-            populate:{
-                path:'cart',
-                model:'Product'
-            }
-        })
-        .populate('fab_list')
-        .populate('order_list')
-        res.status(200).json(user)
-    }catch{
-        next(error)
-    }
-
-})
-
-app.post('/product',async(req,res,next)=>{
-    const {title,description,image,price,hot_deals,sesional,category,fav}=req.body
-    try{
-        const product=await Product.create({
-            title:title,
-            description:description,
-            image:image,
-            price:price,
-            hot_deals:hot_deals,
-            sesional:sesional,
-            category:category,
-            fav:fav
-        })
-        res.status(200).json(product)
-    }catch{
-        next(error)
-    }
-})
-app.get('/product',async(req,res,next)=>{
-    try{
-        const product=await Product.find()
-        res.status(200).json(product)
-    }catch{
-        next(error)
-    }
-})
-app.get('/product/:productId',async(req,res,next)=>{
-    const {productId}=req.params
-    try{
-        const product=await Product.findById(productId).populate('review')
-        res.status(200).json(product)
-    }catch{
-        next(error)
-    }
-})
+app.post('/product',createProductController)
+app.get('/product',getProductController)
+app.get('/product/:productId',getProductByIdController)
 app.post('/addToCart/:productId/:userId',async(req,res,next)=>{
         const {productId,userId}=req.params
        const cart=await Cart.find()
