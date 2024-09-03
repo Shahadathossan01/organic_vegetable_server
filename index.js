@@ -3,6 +3,7 @@ const express=require('express')
 const app=express()
 const cors=require('cors')
 const connectDB = require('./db')
+require('dotenv').config()
 const error = require('./utils/error')
 require('dotenv').config()
 const SSLCommerzPayment = require('sslcommerz-lts')
@@ -24,7 +25,8 @@ const Review = require('./Models/Review')
 const calculate = require('./utils')
 const { v4: uuidv4 } = require('uuid');
 const { registerController, loginController, userByIdController } = require('./controller/auth')
-const { createProductController, getProductController, getProductByIdController } = require('./controller/product')
+const { createProductController, getProductController, getProductByIdController, addToCartController, addFavController } = require('./controller/product')
+const { getCartController, deleteCartController, incrementProductQty, decrementProductQty, deleteAllCart } = require('./controller/cart')
 
 app.get('/health',(req,res)=>{
     try{
@@ -42,112 +44,14 @@ app.get('/user/:id',userByIdController)
 app.post('/product',createProductController)
 app.get('/product',getProductController)
 app.get('/product/:productId',getProductByIdController)
-app.post('/addToCart/:productId/:userId',async(req,res,next)=>{
-        const {productId,userId}=req.params
-       const cart=await Cart.find()
-       let count=true;
-       let existingCart
-       cart.map(item=>{
-        if(item.cart._id==productId){
-            count=false
-            existingCart=item
-        }
-       })
-       if(count){
-           const newCart=await Cart.create({
-               userId:userId,
-               cart:productId,
-               cartQty:1
-           })
-           const user=await User.findById(userId).updateOne({
-            $push : {cart:newCart._id}
-           })
-           res.status(200).json(newCart)
-       }else{
-        existingCart.cartQty +=1
-        await existingCart.save()
-       }
-})
-app.post('/addFav/:productId/:userId',async(req,res,next)=>{
-    const {productId,userId}=req.params
-    const product=await Product.findById(productId)
-    const user=await User.findById(userId)
-    if(product.fav){
-        const updateUser=await User.findById(userId).updateOne({
-            $pull :{fab_list:productId}
-        })
-        
-    }else{
-        const updateUser=await User.findById(userId).updateOne({
-            $push :{fab_list:productId}
-        })
-    }
-    const updateProduct=await Product.findById(productId).updateOne({
-        fav: !product.fav
-    })
-    res.status(200).json(updateProduct)
-}),
+app.post('/addToCart/:productId/:userId',addToCartController)
+app.post('/addFav/:productId/:userId',addFavController),
 
-app.get('/cart',async(req,res,next)=>{
-    try{
-        const cart=await Cart.find().populate('cart')
-        res.status(200).json(cart)
-    }catch{
-        next(error)
-    }
-})
-app.delete('/cart/:id',async(req,res,next)=>{
-    const id=req.params.id
-    try{
-        const cart=await Cart.deleteOne({
-            _id:id
-        })
-        res.status(200).json({message:'delete successfully'})
-    }
-    catch{
-        next(error)
-    }
-})
-app.patch('/cartQtyIncrement/:cartId', async (req, res, next) => {
-    const { cartId } = req.params;
-    try {
-        let cart = await Cart.findById(cartId);
-        if (!cart) {
-            return res.status(404).json({ message: 'Cart not found' });
-        }
-        cart.cartQty += 1;
-        await cart.save();
-        
-        res.status(200).json(cart);
-    } catch (error) {
-        next(error); // Pass the error to the next middleware
-    }
-});
-app.patch('/cartQtyDecrement/:cartId', async (req, res, next) => {
-    const { cartId } = req.params;
-    try {
-        let cart = await Cart.findById(cartId);
-        if (!cart) {
-            return res.status(404).json({ message: 'Cart not found' });
-        }
-        if(cart.cartQty>1){
-            cart.cartQty -= 1;
-            await cart.save();
-        }
-        
-        res.status(200).json(cart);
-    } catch (error) {
-        next(error); // Pass the error to the next middleware
-    }
-});
-app.delete('/deleteAllCart',async(req,res,next)=>{
-    try{
-        const result=await Cart.deleteMany({})
-        res.status(200).json(result)
-    }catch{
-        next(error)
-    }
-})
+app.get('/cart',getCartController)
+app.delete('/cart/:id',deleteCartController)
+app.patch('/cartQtyIncrement/:cartId', incrementProductQty);
+app.patch('/cartQtyDecrement/:cartId',decrementProductQty);
+app.delete('/deleteAllCart',deleteAllCart)
 
 app.post('/order/:userId',async(req,res,next)=>{
     const id=req.params.userId
@@ -279,13 +183,12 @@ app.get('/private',authenticate,async(req,res)=>{
 })
 
 app.use((err,req,res,next)=>{
-    console.log(err)
     const message=err.message?err.message:'Server Error Occured'
     const status=err.status?err.status:500;
     res.status(status).json({message})
 })
 
-connectDB(`${dataBaseUrl}/organic_vetetables`)
+connectDB(`${dataBaseUrl}organic_vetetables`)
 .then(()=>{
     console.log('Database Connected')
     app.listen(port,()=>{
