@@ -27,6 +27,7 @@ const { v4: uuidv4 } = require('uuid');
 const { registerController, loginController, userByIdController } = require('./controller/auth')
 const { createProductController, getProductController, getProductByIdController, addToCartController, addFavController } = require('./controller/product')
 const { getCartController, deleteCartController, incrementProductQty, decrementProductQty, deleteAllCart } = require('./controller/cart')
+const { placeOrderController } = require('./controller/order')
 
 app.get('/health',(req,res)=>{
     try{
@@ -59,7 +60,6 @@ app.post('/order/:userId',async(req,res,next)=>{
     const cartCalculate=calculate(cartItem)
     const tranId = uuidv4();
     try{ 
-        
         const data = {
             total_amount: cartCalculate.total,
             currency: 'BDT',
@@ -121,6 +121,7 @@ app.post('/order/:userId',async(req,res,next)=>{
         })
         app.post("/payment/fail",async(req,res,next)=>{
             res.redirect('http://localhost:5173/paymentFail')
+            
         })
         app.post("/payment/cancel",async(req,res,next)=>{
             res.redirect('http://localhost:5173/paymentCalcel')
