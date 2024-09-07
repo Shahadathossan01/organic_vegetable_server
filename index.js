@@ -15,7 +15,7 @@ const dataBaseUrl=process.env.DATABASE_URL
 const corsConfig={
     origin:"*",
     credential:true,
-    methods:["GET","POST","PUT","DELETE"]
+    methods:["GET","POST","PUT","PATCH","DELETE","OPTIONS"]
 }
 app.options("",cors(corsConfig))
 app.use(cors(corsConfig))
