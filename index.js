@@ -12,13 +12,7 @@ const store_passwd = process.env.STORE_PASSED
 const is_live = false //true for live, false for sandbox
 const port=process.env.PORT
 const dataBaseUrl=process.env.DATABASE_URL
-const corsConfig={
-    origin:"*",
-    credential:true,
-    methods:["GET","POST","PUT","PATCH","DELETE","OPTIONS"]
-}
-app.options("",cors(corsConfig))
-app.use(cors(corsConfig))
+app.use(cors())
 app.use(express.json())
 const bcrypt=require('bcryptjs')
 const jwt=require('jsonwebtoken')
